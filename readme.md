@@ -3,13 +3,13 @@ Query Swarm
 
 Query Swarm allows you to safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.
 
-Use when the following are important:
+####Use when the following are important:
 - Tasks should be allowed a long time to complete
 - Each task must only ever be processed once
 - Failed tasks must not just "disappear"
 - Nodes should shutdown gracefully
 
-Do *not* use if the following are required:
+####Do *not* use if the following are required:
 - Tasks must be strictly processed in order
 
 Requirements
