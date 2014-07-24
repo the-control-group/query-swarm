@@ -2,8 +2,8 @@
 Events
 ------
 
-error: message, Error, (task)
+error: Error, [message]
 populate: cursor, tasks
-consume: task, (result)
+consume: task, [result]
 deadletter: task
 acknowledge: task
