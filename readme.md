@@ -15,7 +15,7 @@ Query Swarm allows you to safely distribute query-driven tasks over a swarm of p
 Requirements
 ------------
 
-Query Swarm relies on [redis](redis.io) to store the lock, cursor, queue, and lists responsible for coordination. For testing, you can use [redis-mock](https://github.com/faeldt/redis-mock) or any other library that conforms to the [node_redis](https://github.com/mranney/node_redis) interface.
+Query Swarm relies on [redis](http://redis.io) to store the lock, cursor, queue, and lists responsible for coordination. For testing, you can use [redis-mock](https://github.com/faeldt/redis-mock) or any other library that conforms to the [node_redis](https://github.com/mranney/node_redis) interface.
 
 
 Usage
