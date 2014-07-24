@@ -2,13 +2,30 @@
   "name": "query-swarm",
   "version": "0.0.0",
   "description": "Safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.",
+  "author": "Mike Marcacci <mike.marcacci@thecontrolgroup.com>",
+  "contributors": [
+    {
+      "name": "Mike Marcacci",
+      "email": "mike.marcacci@gmail.com"
+    }
+  ],
   "main": "index.js",
+  "homepage": "https://github.com/the-control-group/query-swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-control-group/query-swarm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/the-control-group/query-swarm/issues"
+  },
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "mocha test/tests/*"
   },
-  "author": "Mike Marcacci <mike.marcacci@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "async": "^0.9.0"
+  }
 }
