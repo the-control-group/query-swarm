@@ -1,6 +1,6 @@
 {
   "name": "query-swarm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.",
   "keywords": "schedule, queue, task, job, worker, redis, distributed, async",
   "author": "Mike Marcacci <mike.marcacci@thecontrolgroup.com>",
