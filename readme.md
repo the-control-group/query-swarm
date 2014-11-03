@@ -3,6 +3,8 @@ Query Swarm
 
 Query Swarm allows you to safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.
 
+![Overview](overview.svg)
+
 tl;dr
 -----
 
@@ -53,13 +55,13 @@ swarm.stop(function(){
 Requirements
 ------------
 
-Query Swarm relies on [redis](http://redis.io) to store the lock, cursor, queue, and lists responsible for coordination. For testing, you can use [redis-mock](https://github.com/faeldt/redis-mock) or any other library that conforms to the [node_redis](https://github.com/mranney/node_redis) interface.
+Query Swarm relies on [redis](http://redis.io) to store the lock, cursor, queue, and lists responsible for swarm coordination.
 
 
 Usage
 -----
 
-TODO
+See tl;dr above.
 
 
 Events
