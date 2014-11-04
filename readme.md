@@ -3,7 +3,7 @@ Query Swarm
 
 Query Swarm allows you to safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.
 
-![Overview](overview.svg)
+![Overview](overview.png)
 
 tl;dr
 -----
