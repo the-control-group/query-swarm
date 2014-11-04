@@ -22,7 +22,7 @@ describe('Start/Stop', function(){
 	var q = 0;
 	var w = 0;
 	var swarm = new QuerySwarm(
-		'swarm.test',
+		'QuerySwarm:test',
 		function(cursor, callback) {
 			q++;
 			cursor = cursor || 0;
@@ -51,7 +51,7 @@ describe('Start/Stop', function(){
 
 	it('should not start when destroyed', function(done){
 		swarm.destroy(function(err){
-			assert.isNull(err);
+			if(err) return done(err);
 			setTimeout(function(){
 				assert.equal(q, 0);
 				assert.equal(w, 0);
@@ -80,7 +80,7 @@ describe('Start/Stop', function(){
 
 	it('should not move successful tasks to the deadletter list', function(done){
 		redis.llen('swarm.test:deadletter', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
 		});
@@ -88,7 +88,7 @@ describe('Start/Stop', function(){
 
 	it('should not leave tasks in the processing list', function(done){
 		redis.llen('swarm.test:processing', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
 		});
@@ -96,7 +96,7 @@ describe('Start/Stop', function(){
 
 	it('should leave unprocessed tasks in the queue', function(done){
 		redis.llen('swarm.test:queue', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, q * 15 - w);
 			done();
 		});
@@ -104,7 +104,7 @@ describe('Start/Stop', function(){
 
 	it('should leave the cursor in the correct place', function(done){
 		redis.get('swarm.test:cursor', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(JSON.parse(res), q * 15);
 			done();
 		});
@@ -144,7 +144,7 @@ describe('Deadletter', function(){
 
 	it('should continue processing after a task fails', function(done){
 		swarm.destroy(function(err){
-			assert.isNull(err);
+			if(err) return done(err);
 			swarm.start();
 			setTimeout(function(){
 				assert.equal(errs, 2);
@@ -157,7 +157,7 @@ describe('Deadletter', function(){
 
 	it('should move failed tasks to the deadletter list', function(done){
 		redis.llen('swarm.test:deadletter', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, 2);
 			done();
 		});
@@ -165,7 +165,7 @@ describe('Deadletter', function(){
 
 	it('should not leave tasks in the processing list', function(done){
 		redis.llen('swarm.test:processing', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
 		});
@@ -173,7 +173,7 @@ describe('Deadletter', function(){
 
 	it('should leave unprocessed tasks in the queue', function(done){
 		redis.llen('swarm.test:queue', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(res, q * 15 - w);
 			done();
 		});
@@ -181,7 +181,7 @@ describe('Deadletter', function(){
 
 	it('should leave the cursor in the correct place', function(done){
 		redis.get('swarm.test:cursor', function(err, res){
-			assert.isNull(err);
+			if(err) return done(err);
 			assert.equal(JSON.parse(res), q * 15);
 			done();
 		});
