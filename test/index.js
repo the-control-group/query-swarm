@@ -79,7 +79,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should not move successful tasks to the deadletter list', function(done){
-		redis.llen('swarm.test:deadletter', function(err, res){
+		redis.llen('QuerySwarm:test:deadletter', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
@@ -87,7 +87,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should not leave tasks in the processing list', function(done){
-		redis.llen('swarm.test:processing', function(err, res){
+		redis.llen('QuerySwarm:test:processing', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
@@ -95,7 +95,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should leave unprocessed tasks in the queue', function(done){
-		redis.llen('swarm.test:queue', function(err, res){
+		redis.llen('QuerySwarm:test:queue', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, q * 15 - w);
 			done();
@@ -103,7 +103,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should leave the cursor in the correct place', function(done){
-		redis.get('swarm.test:cursor', function(err, res){
+		redis.get('QuerySwarm:test:cursor', function(err, res){
 			if(err) return done(err);
 			assert.equal(JSON.parse(res), q * 15);
 			done();
@@ -118,7 +118,7 @@ describe('Deadletter', function(){
 	var errs = 0;
 
 	var swarm = new QuerySwarm(
-		'swarm.test',
+		'QuerySwarm:test',
 		function(cursor, callback) {
 			q++;
 			cursor = cursor || 0;
@@ -156,7 +156,7 @@ describe('Deadletter', function(){
 	});
 
 	it('should move failed tasks to the deadletter list', function(done){
-		redis.llen('swarm.test:deadletter', function(err, res){
+		redis.llen('QuerySwarm:test:deadletter', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, 2);
 			done();
@@ -164,7 +164,7 @@ describe('Deadletter', function(){
 	});
 
 	it('should not leave tasks in the processing list', function(done){
-		redis.llen('swarm.test:processing', function(err, res){
+		redis.llen('QuerySwarm:test:processing', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, 0);
 			done();
@@ -172,7 +172,7 @@ describe('Deadletter', function(){
 	});
 
 	it('should leave unprocessed tasks in the queue', function(done){
-		redis.llen('swarm.test:queue', function(err, res){
+		redis.llen('QuerySwarm:test:queue', function(err, res){
 			if(err) return done(err);
 			assert.equal(res, q * 15 - w);
 			done();
@@ -180,7 +180,7 @@ describe('Deadletter', function(){
 	});
 
 	it('should leave the cursor in the correct place', function(done){
-		redis.get('swarm.test:cursor', function(err, res){
+		redis.get('QuerySwarm:test:cursor', function(err, res){
 			if(err) return done(err);
 			assert.equal(JSON.parse(res), q * 15);
 			done();
@@ -194,7 +194,7 @@ describe('Errors', function(){
 	it('should emit an error if there is a problem with the query', function(done){
 		var i = 0;
 		var swarm = new QuerySwarm(
-			'swarm.test',
+			'QuerySwarm:test',
 			function(cursor, callback) {
 				assert.equal(i, 0, 'the query should have only run once.');
 				i++;
@@ -218,7 +218,7 @@ describe('Errors', function(){
 		var i = 0;
 		var stopped = false;
 		var swarm = new QuerySwarm(
-			'swarm.test',
+			'QuerySwarm:test',
 			function(cursor, callback) {
 				assert.equal(i, 0, 'the query should have only run once.');
 				i++;
@@ -252,7 +252,7 @@ describe('Events', function(){
 		this.timeout(3000);
 
 		var swarm = new QuerySwarm(
-			'swarm.test',
+			'QuerySwarm:test',
 			function(cursor, callback) {
 				queryCount++;
 				var newCursor = Math.min(db.length, cursor+10);
