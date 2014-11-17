@@ -1,4 +1,4 @@
-Query Swarm
+Query Swarm [![Build Status](https://travis-ci.org/the-control-group/query-swarm.svg?branch=master)](https://travis-ci.org/the-control-group/query-swarm)
 ===========
 
 Query Swarm allows you to safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.
