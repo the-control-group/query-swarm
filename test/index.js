@@ -16,7 +16,7 @@ var opts = {
 	retryDelay: 50,
 	lockTimeout: 200,
 	concurrency: 2
-}
+};
 
 describe('Start/Stop', function(){
 	var q = 0;
@@ -111,7 +111,6 @@ describe('Start/Stop', function(){
 	});
 });
 
-
 describe('Deadletter', function(){
 	var q = 0;
 	var w = 0;
@@ -186,7 +185,6 @@ describe('Deadletter', function(){
 			done();
 		});
 	});
-
 });
 
 describe('Errors', function(){
@@ -201,7 +199,7 @@ describe('Errors', function(){
 				callback(new Error('error1'));
 			},
 			function(task, callback) {
-				assert.ok(false, 'the worker should never be run.')
+				assert.ok(false, 'the worker should never be run.');
 			},
 			opts
 		);
