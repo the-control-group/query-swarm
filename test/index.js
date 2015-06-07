@@ -63,8 +63,14 @@ describe('Start/Stop', function(){
 	it('should start and stop when commanded', function(done){
 		swarm.start();
 		setTimeout(function(){
+
+			// the swarm should query once
 			assert.equal(q, 1);
-			assert.ok(w > 9 && w < 12); // can be 10 or 11, because we have 2 workers
+
+			// and consume the first 10 jobs before issuing a stop command;
+			// could have processed 10 or 11 jobs, because we have 2 workers
+			assert.isAbove(w, 9);
+			assert.isBelow(w, 12);
 			done();
 		}, 500);
 	});
@@ -72,8 +78,14 @@ describe('Start/Stop', function(){
 	it('should start and stop when commanded', function(done){
 		swarm.start();
 		setTimeout(function(){
+
+			// the swarm should query one more time
 			assert.equal(q, 2);
-			assert.ok(w > 19 && w < 22); // can be 20 or 21, because we have 2 workers
+
+			// and consume the next 10 jobs before issuing a stop command;
+			// could have processed 20 or 21 jobs, because we have 2 workers
+			assert.isAbove(w, 19);
+			assert.isBelow(w, 22);
 			done();
 		}, 500);
 	});
