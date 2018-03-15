@@ -260,6 +260,58 @@ describe('Requeue', function(){
 			});
 		},500)
 	});
+	it('should requeue up to maxProcessingRetries unless the worker specifies force_deadletter', function(done) {
+		var r = 0;
+		var d = 0;
+		var e = 0;
+		var q = 0;
+		var w = 0;
+		var tasks = [1,1];
+		var expectedWorkerRuns = tasks.length;
+		var expectedRequeues = 0;
+		var expectedDeadletters = tasks.length;
+		var expectedErrors = tasks.length;
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {
+				q++;
+				callback(null, cursor, tasks.splice(0,1));
+			},
+			function(task, callback) {
+				w++;
+				callback(new Error('test'), null, true)
+			},
+			{
+				throttle: 10,
+				threshold: 4,
+				retryDelay: 50,
+				lockTimeout: 200,
+				concurrency: 2,
+				maxProcessingRetries: 1,
+			}
+		);
+		swarm.on('error', function(){
+			e++;
+		});
+		swarm.on('requeue', function(task) {
+			r++;
+			assert.equal(task, 1);
+		});
+		swarm.on('deadletter', function(task) {
+			d++;
+			assert.equal(task, 1);
+		})
+		swarm.start();
+		setTimeout(function(){
+			swarm.destroy(function(){
+				assert.equal(w, expectedWorkerRuns);
+				assert.equal(r, expectedRequeues);
+				assert.equal(d, expectedDeadletters);
+				assert.equal(e, expectedErrors);
+				done();
+			});
+		},500)
+	});
 });
 
 describe('Errors', function(){
