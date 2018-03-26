@@ -18,6 +18,10 @@ var opts = {
 	concurrency: 2
 };
 
+after(function(done) {
+	redis.del('QuerySwarm:test:cursor', done);
+});
+
 before(function(done) {
 	redis.scan('0',function(err, results) {
 		if (err) return done(err);
