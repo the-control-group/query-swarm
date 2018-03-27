@@ -18,6 +18,18 @@ var opts = {
 	concurrency: 2
 };
 
+after(function(done) {
+	redis.del('QuerySwarm:test:cursor', done);
+});
+
+before(function(done) {
+	redis.scan('0',function(err, results) {
+		if (err) return done(err);
+		if (results[1].length !== 0) return done(new Error('Redis is not empty'));
+		done();
+	})
+})
+
 describe('Start/Stop', function(){
 	var q = 0;
 	var w = 0;
@@ -196,6 +208,113 @@ describe('Deadletter', function(){
 			assert.equal(JSON.parse(res), q * 15);
 			done();
 		});
+	});
+});
+
+describe('Requeue', function(){
+	it('should requeue up to maxProcessingRetries', function(done) {
+		var r = 0;
+		var d = 0;
+		var e = 0;
+		var q = 0;
+		var w = 0;
+		var tasks = [1,1];
+		var expectedWorkerRuns = tasks.length * 2;
+		var expectedRequeues = tasks.length;
+		var expectedDeadletters = tasks.length;
+		var expectedErrors = tasks.length * 2;
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {
+				q++;
+				callback(null, cursor, tasks.splice(0,1));
+			},
+			function(task, callback) {
+				w++;
+				callback(new Error('test'))
+			},
+			{
+				throttle: 10,
+				threshold: 4,
+				retryDelay: 50,
+				lockTimeout: 200,
+				concurrency: 2,
+				maxProcessingRetries: 1,
+			}
+		);
+		swarm.on('error', function(){
+			e++;
+		});
+		swarm.on('requeue', function(task) {
+			r++;
+			assert.equal(task, 1);
+		});
+		swarm.on('deadletter', function(task) {
+			d++;
+			assert.equal(task, 1);
+		})
+		swarm.start();
+		setTimeout(function(){
+			swarm.destroy(function(){
+				assert.equal(w, expectedWorkerRuns);
+				assert.equal(r, expectedRequeues);
+				assert.equal(d, expectedDeadletters);
+				assert.equal(e, expectedErrors);
+				done();
+			});
+		},500)
+	});
+	it('should requeue up to maxProcessingRetries unless the worker specifies force_deadletter', function(done) {
+		var r = 0;
+		var d = 0;
+		var e = 0;
+		var q = 0;
+		var w = 0;
+		var tasks = [1,1];
+		var expectedWorkerRuns = tasks.length;
+		var expectedRequeues = 0;
+		var expectedDeadletters = tasks.length;
+		var expectedErrors = tasks.length;
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {
+				q++;
+				callback(null, cursor, tasks.splice(0,1));
+			},
+			function(task, callback) {
+				w++;
+				callback(new Error('test'), null, true)
+			},
+			{
+				throttle: 10,
+				threshold: 4,
+				retryDelay: 50,
+				lockTimeout: 200,
+				concurrency: 2,
+				maxProcessingRetries: 1,
+			}
+		);
+		swarm.on('error', function(){
+			e++;
+		});
+		swarm.on('requeue', function(task) {
+			r++;
+			assert.equal(task, 1);
+		});
+		swarm.on('deadletter', function(task) {
+			d++;
+			assert.equal(task, 1);
+		})
+		swarm.start();
+		setTimeout(function(){
+			swarm.destroy(function(){
+				assert.equal(w, expectedWorkerRuns);
+				assert.equal(r, expectedRequeues);
+				assert.equal(d, expectedDeadletters);
+				assert.equal(e, expectedErrors);
+				done();
+			});
+		},500)
 	});
 });
 

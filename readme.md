@@ -72,3 +72,8 @@ Events
 - consume: task, [result]
 - deadletter: task
 - acknowledge: task
+- requeue: task
+
+Caveats
+-------
+Processing retry functionality via the `maxProcessingRetries` option, assumes your tasks are all unique at any given point in time.
