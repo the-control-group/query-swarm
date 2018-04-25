@@ -28,7 +28,7 @@ before(function(done) {
 		if (results[1].length !== 0) return done(new Error('Redis is not empty'));
 		done();
 	})
-})
+});
 
 describe('Start/Stop', function(){
 	var q = 0;
@@ -419,5 +419,32 @@ describe('Events', function(){
 	it('should emit a populate event each time a query completes', function(){
 		assert.lengthOf(populateArr, queryCount);
 		assert.equal(populateArr.reduce(function(a,b){return a+b;}), db.length);
+	});
+});
+
+describe('Populate', function() {
+	it('should not crash due to "RangeError: Maximum call stack size exceeded" when a large result set is returned', function(done) {
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {
+				callback(null, null, new Array(1000000));
+				swarm.stop();
+			},
+			function(task, callback) {
+				workerCount++;
+				dump.push(task);
+				if(dump.length == db.length) {
+					assert.sameMembers(dump, db);
+					swarm.stop(done);
+				}
+				setTimeout(callback, 10, null, dump.length);
+			},
+			opts
+		);
+		swarm.start();
+		swarm.on('populate', function(cursor, tasks){
+			assert.equal(tasks.length,1000000);
+			done();
+		});
 	});
 });
