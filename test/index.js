@@ -3,6 +3,7 @@
 var assert = require('chai').assert;
 var redis = require('redis').createClient();
 var QuerySwarm = require('../lib/QuerySwarm.js')(redis);
+var async = require('async');
 
 var db = [];
 for (var i = 0, l = 100; i < l; i++) {
@@ -131,6 +132,38 @@ describe('Start/Stop', function(){
 			assert.equal(JSON.parse(res), q * 15);
 			done();
 		});
+	});
+
+	it('should callback to overlapping calls to destroy', function(done){
+		// this should take just over 1 second to compelete
+		this.timeout(1100);
+		// TODO fail the test if it took less than 1 second
+
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {},
+			function(task, callback) {},
+			opts
+		);
+		swarm.workers.forEach(function(worker) {
+			worker.active = true;
+			worker.sleep = function(ms) {
+				setTimeout(function(){
+					worker.next('consume');
+				}, ms);
+			};
+			worker.next('sleep', false, 1000);
+		});
+		async.parallel([
+			function(cb) { swarm.destroy(function(err){
+				if(err) return cb(err);
+				cb();
+			}); },
+			function(cb) { swarm.destroy(function(err){
+				if(err) return cb(err);
+				cb();
+			}); },
+		], done);
 	});
 });
 
@@ -460,3 +493,25 @@ describe('Populate', function() {
 		});
 	});
 });
+
+// describe('Non-graceful shutdown recovery', function() {
+// 	it('should recover items from processing', function(done) {
+// 		var swarm = new QuerySwarm(
+// 			'QuerySwarm:test:'+this.test.fullTitle(),
+// 			function(cursor, callback) {
+// 				callback(null, null, new Array(1000000));
+// 				swarm.stop();
+// 			},
+// 			function(task, callback) {
+// 				workerCount++;
+// 				dump.push(task);
+// 				if(dump.length == db.length) {
+// 					assert.sameMembers(dump, db);
+// 					swarm.stop(done);
+// 				}
+// 				setTimeout(callback, 10, null, dump.length);
+// 			},
+// 			opts
+// 		);
+// 	});
+// });
