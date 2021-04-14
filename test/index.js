@@ -3,6 +3,7 @@
 var assert = require('chai').assert;
 var redis = require('redis').createClient();
 var QuerySwarm = require('../lib/QuerySwarm.js')(redis);
+var async = require('async');
 
 var db = [];
 for (var i = 0, l = 100; i < l; i++) {
@@ -73,9 +74,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should start and stop when commanded', function(done){
-		swarm.start();
-		setTimeout(function(){
-
+		swarm.once('stopped',function(){
 			// the swarm should query once
 			assert.equal(q, 1);
 
@@ -84,12 +83,13 @@ describe('Start/Stop', function(){
 			assert.isAbove(w, 9);
 			assert.isBelow(w, 12);
 			done();
-		}, 500);
+		});
+		swarm.start();
 	});
 
 	it('should start and stop when commanded', function(done){
 		swarm.start();
-		setTimeout(function(){
+		swarm.once('stopped',function(){
 
 			// the swarm should query one more time
 			assert.equal(q, 2);
@@ -99,7 +99,7 @@ describe('Start/Stop', function(){
 			assert.isAbove(w, 19);
 			assert.isBelow(w, 22);
 			done();
-		}, 500);
+		});
 	});
 
 	it('should not move successful tasks to the deadletter list', function(done){
@@ -133,6 +133,38 @@ describe('Start/Stop', function(){
 			done();
 		});
 	});
+
+	it('should callback to overlapping calls to destroy', function(done){
+		// this should take just over 1 second to compelete
+		this.timeout(1100);
+		// TODO fail the test if it took less than 1 second
+
+		var swarm = new QuerySwarm(
+			'QuerySwarm:test:'+this.test.fullTitle(),
+			function(cursor, callback) {},
+			function(task, callback) {},
+			opts
+		);
+		swarm.workers.forEach(function(worker) {
+			worker.active = true;
+			worker.sleep = function(ms) {
+				setTimeout(function(){
+					worker.next('consume');
+				}, ms);
+			};
+			worker.next('sleep', false, 1000);
+		});
+		async.parallel([
+			function(cb) { swarm.destroy(function(err){
+				if(err) return cb(err);
+				cb();
+			}); },
+			function(cb) { swarm.destroy(function(err){
+				if(err) return cb(err);
+				cb();
+			}); },
+		], done);
+	});
 });
 
 describe('Deadletter', function(){
@@ -159,7 +191,13 @@ describe('Deadletter', function(){
 
 			callback(null, {});
 		},
-		opts
+		{
+			throttle: 10,
+			threshold: 4,
+			retryDelay: 50,
+			lockTimeout: 200,
+			concurrency: 2
+		}
 	);
 
 	// increment the # of errors
@@ -168,13 +206,20 @@ describe('Deadletter', function(){
 	it('should continue processing after a task fails', function(done){
 		swarm.destroy(function(err){
 			if(err) return done(err);
-			swarm.start();
-			setTimeout(function(){
+			swarm.once('stopped', function(){
 				assert.equal(errs, 2);
+
+				// the swarm should query one more time
 				assert.equal(q, 2);
-				assert.ok(w > 19 && w < 22); // can be 20 or 21, because we have 2 workers
+
+				// and consume the next 10 jobs before issuing a stop command;
+				// could have processed 20 or 21 jobs, because we have 2 workers
+				assert.isAbove(w, 19);
+				assert.isBelow(w, 22);
+
 				done();
-			}, 100);
+			});
+			swarm.start();
 		});
 	});
 
@@ -231,7 +276,7 @@ describe('Requeue', function(){
 			},
 			function(task, callback) {
 				w++;
-				callback(new Error('test'))
+				callback(new Error('test'));
 			},
 			{
 				throttle: 10,
@@ -252,7 +297,7 @@ describe('Requeue', function(){
 		swarm.on('deadletter', function(task) {
 			d++;
 			assert.equal(task, 1);
-		})
+		});
 		swarm.start();
 		setTimeout(function(){
 			swarm.destroy(function(){
@@ -264,7 +309,7 @@ describe('Requeue', function(){
 			});
 		},500)
 	});
-	it('should requeue up to maxProcessingRetries unless the worker specifies force_deadletter', function(done) {
+	it('should requeue up to maxProcessingRetries unless the worker specifies forceDeadletter', function(done) {
 		var r = 0;
 		var d = 0;
 		var e = 0;
@@ -283,7 +328,7 @@ describe('Requeue', function(){
 			},
 			function(task, callback) {
 				w++;
-				callback(new Error('test'), null, true)
+				callback(new Error('test'), null, true);
 			},
 			{
 				throttle: 10,
@@ -448,3 +493,25 @@ describe('Populate', function() {
 		});
 	});
 });
+
+// describe('Non-graceful shutdown recovery', function() {
+// 	it('should recover items from processing', function(done) {
+// 		var swarm = new QuerySwarm(
+// 			'QuerySwarm:test:'+this.test.fullTitle(),
+// 			function(cursor, callback) {
+// 				callback(null, null, new Array(1000000));
+// 				swarm.stop();
+// 			},
+// 			function(task, callback) {
+// 				workerCount++;
+// 				dump.push(task);
+// 				if(dump.length == db.length) {
+// 					assert.sameMembers(dump, db);
+// 					swarm.stop(done);
+// 				}
+// 				setTimeout(callback, 10, null, dump.length);
+// 			},
+// 			opts
+// 		);
+// 	});
+// });
