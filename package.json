@@ -2,12 +2,16 @@
   "name": "query-swarm",
   "version": "0.3.0",
   "description": "Safely distribute query-driven tasks over a swarm of parallel functions on a single process or across multiple processes/machines.",
-  "keywords": "schedule, queue, task, job, worker, redis, distributed, async",
+  "keywords": ["schedule", "queue", "task", "job", "worker", "redis", "distributed", "async"],
   "author": "Mike Marcacci <mike.marcacci@thecontrolgroup.com>",
   "contributors": [
     {
       "name": "Mike Marcacci",
       "email": "mike.marcacci@gmail.com"
+    },
+    {
+      "name": "Nick Carenza",
+      "email": "nickcarenza@gmail.com"
     }
   ],
   "main": "lib/QuerySwarm.js",
@@ -27,12 +31,15 @@
   },
   "license": "MIT",
   "dependencies": {
-    "async": "^1.4.2",
-    "redis": "^0.12.1",
-    "redlock": "^1.0.1"
+    "async": "^3.2.3",
+    "redis": "^4.0.6",
+    "redlock": "^4.2.0"
   },
   "devDependencies": {
-    "chai": "^3.0.0",
-    "mocha": "^2.0.1"
+    "chai": "^4.3.6",
+    "mocha": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=16"
   }
 }

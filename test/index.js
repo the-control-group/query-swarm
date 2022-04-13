@@ -1,7 +1,9 @@
 'use strict';
 
 var assert = require('chai').assert;
-var redis = require('redis').createClient();
+var redis = require('redis').createClient({
+	legacyMode: true,
+});
 var QuerySwarm = require('../lib/QuerySwarm.js')(redis);
 var async = require('async');
 
@@ -23,6 +25,14 @@ after(function(done) {
 	redis.del('QuerySwarm:test:cursor', done);
 });
 
+before(async function() {
+	return await redis.connect();
+});
+
+after(async function () {
+	return await redis.disconnect();
+});
+
 before(function(done) {
 	redis.scan('0',function(err, results) {
 		if (err) return done(err);
@@ -34,25 +44,37 @@ before(function(done) {
 describe('Start/Stop', function(){
 	var q = 0;
 	var w = 0;
+	var l = 15;
 	var swarm = new QuerySwarm(
 		'QuerySwarm:test',
 		function(cursor, callback) {
 			q++;
 			cursor = cursor || 0;
 			var res = [];
-			for (var i = 0, l = 15; i < l; i++) {
+			for (var i = 0; i < l; i++) {
 				res.push(cursor + i);
 			}
-			callback(null, cursor+15, res);
+			callback(null, cursor+l, res);
 		},
 		function(task, callback) {
 			w++;
 			// stop on 10, 20, 30...
-			if(w % 10 === 0) swarm.stop();
+			// FIXME sometimes w==11 get's passed this point
+			// NOTE ^ That happens because QuerySwarm might start the next task before the workers get stopped 
+			if(w % 10 === 0) {
+				swarm.stop((err) => {
+					if (err) console.error(err)
+				});
+				return callback(null, {});
+			}
 			callback(null, {});
 		},
-		opts
+		{ ...opts,
+			throttle: 1000,
+		}
 	);
+
+	swarm.on('error', console.error);
 
 	it('should not start when created', function(done){
 		setTimeout(function(){
@@ -74,6 +96,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should start and stop when commanded', function(done){
+		this.timeout(10000);
 		swarm.once('stopped',function(){
 			// the swarm should query once
 			assert.equal(q, 1);
@@ -88,7 +111,7 @@ describe('Start/Stop', function(){
 	});
 
 	it('should start and stop when commanded', function(done){
-		swarm.start();
+		this.timeout(10000);
 		swarm.once('stopped',function(){
 
 			// the swarm should query one more time
@@ -100,6 +123,7 @@ describe('Start/Stop', function(){
 			assert.isBelow(w, 22);
 			done();
 		});
+		swarm.start();
 	});
 
 	it('should not move successful tasks to the deadletter list', function(done){
@@ -121,7 +145,7 @@ describe('Start/Stop', function(){
 	it('should leave unprocessed tasks in the queue', function(done){
 		redis.llen('QuerySwarm:test:queue', function(err, res){
 			if(err) return done(err);
-			assert.equal(res, q * 15 - w);
+			assert.equal(res, q * l - w);
 			done();
 		});
 	});
@@ -129,7 +153,7 @@ describe('Start/Stop', function(){
 	it('should leave the cursor in the correct place', function(done){
 		redis.get('QuerySwarm:test:cursor', function(err, res){
 			if(err) return done(err);
-			assert.equal(JSON.parse(res), q * 15);
+			assert.equal(JSON.parse(res), q * l);
 			done();
 		});
 	});
@@ -168,8 +192,8 @@ describe('Start/Stop', function(){
 });
 
 describe('Deadletter', function(){
-	var q = 0;
 	var w = 0;
+	var q = 0;
 	var errs = 0;
 
 	var swarm = new QuerySwarm(
@@ -177,13 +201,17 @@ describe('Deadletter', function(){
 		function(cursor, callback) {
 			q++;
 			cursor = cursor || 0;
-			callback(null, cursor+15, [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]);
+			// should return 15 elements twice
+			callback(null, cursor+1, cursor <=1 ? [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] : []);
 		},
 		function(task, callback) {
 			w++;
 
 			// stop on 20, 40, 60...
-			if(w % 20 === 0) swarm.stop();
+			if(w % 20 === 0) {
+				swarm.stop(() => {});
+				return callback(null, {});
+			}
 
 			// deadletter 5, 15, 25...
 			if((w+5) % 10 === 0)
@@ -192,7 +220,7 @@ describe('Deadletter', function(){
 			callback(null, {});
 		},
 		{
-			throttle: 10,
+			throttle: 100,
 			threshold: 4,
 			retryDelay: 50,
 			lockTimeout: 200,
@@ -200,26 +228,25 @@ describe('Deadletter', function(){
 		}
 	);
 
+	after('destroy', swarm.destroy.bind(swarm));
+
 	// increment the # of errors
 	swarm.on('error', function(err, msg){errs++;});
 
 	it('should continue processing after a task fails', function(done){
 		swarm.destroy(function(err){
 			if(err) return done(err);
-			swarm.once('stopped', function(){
-				assert.equal(errs, 2);
+			swarm.start();
+			setTimeout(() => {
 
-				// the swarm should query one more time
-				assert.equal(q, 2);
+				assert.equal(errs, 2, 'errors');
 
 				// and consume the next 10 jobs before issuing a stop command;
-				// could have processed 20 or 21 jobs, because we have 2 workers
 				assert.isAbove(w, 19);
 				assert.isBelow(w, 22);
 
-				done();
-			});
-			swarm.start();
+				swarm.stop(done);
+			}, 1000);
 		});
 	});
 
@@ -242,7 +269,7 @@ describe('Deadletter', function(){
 	it('should leave unprocessed tasks in the queue', function(done){
 		redis.llen('QuerySwarm:test:queue', function(err, res){
 			if(err) return done(err);
-			assert.equal(res, q * 15 - w);
+			assert.equal(res, 30 - w);
 			done();
 		});
 	});
@@ -250,7 +277,7 @@ describe('Deadletter', function(){
 	it('should leave the cursor in the correct place', function(done){
 		redis.get('QuerySwarm:test:cursor', function(err, res){
 			if(err) return done(err);
-			assert.equal(JSON.parse(res), q * 15);
+			assert.equal(JSON.parse(res), q);
 			done();
 		});
 	});
@@ -429,6 +456,7 @@ describe('Events', function(){
 			'QuerySwarm:test',
 			function(cursor, callback) {
 				queryCount++;
+				if (!cursor) cursor = 0;
 				var newCursor = Math.min(db.length, cursor+10);
 				callback(null, newCursor, db.slice(cursor, newCursor));
 			},
